@@ -2,7 +2,7 @@
 
 from argparse import ArgumentParser
 from Queue import Empty
-from multiprocessing import Process, Queue, Value
+from multiprocessing import Process, Queue, Value, cpu_count
 
 import requests
 import urllib
