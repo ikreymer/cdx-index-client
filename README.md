@@ -9,11 +9,11 @@ This may be especially useful for prefix/domain extraction.
 
 To use, first install dependencies: `pip install -r requirements.txt`
 
-For example, fetch all urls from the index starting with `http://iana.org/`
-`python cc-index-client.py http://iana.org/*`
+For example, fetch all entries in the index for url `http://iana.org/`, run:
+`python cc-index-client.py http://iana.org/`
 
 It is often good idea to check how big the dataset is:
-`python cc-index-client.py *.io --num-pages`
+`python cc-index-client.py *.io --show-num-pages`
 
 will print the number of pages that will be fetched to get a list of urls in the '*.io' domain.
 
