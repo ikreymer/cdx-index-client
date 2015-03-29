@@ -5,6 +5,7 @@ from Queue import Empty
 from multiprocessing import Process, Queue, Value, cpu_count
 
 import requests
+import shutil
 import urllib
 import sys
 import signal
@@ -42,6 +43,7 @@ def fetch_result_page(job_params):
     num_pages = job_params['num_pages']
     output_prefix = job_params['output_prefix']
     timeout = job_params['timeout']
+    gzipped = job_params['gzipped']
 
     query = {'url': url,
              'page': page}
@@ -75,14 +77,20 @@ def fetch_result_page(job_params):
         return
 
     if r.status_code != 200:
-        logging.error(r.text)
+        r.raise_for_status()
         r.close()
         return
 
-    #print('Begin writing page {0} -> "{2}"'.format(page_str, num_pages, filename))
-    with open(filename, 'w+b') as fh:
-        for chunk in r.iter_content(1024):
-            fh.write(chunk)
+    if not gzipped:
+        with open(filename, 'w+b') as fh:
+            for chunk in r.iter_content(1024):
+                fh.write(chunk)
+    else:
+        if r.headers.get('content-encoding') == 'gzip':
+            filename += '.gz'
+
+        with open(filename, 'w+b') as fh:
+            shutil.copyfileobj(r.raw, fh)
 
     logging.debug('Done with "{0}"'.format(filename))
 
@@ -107,13 +115,16 @@ def do_work(job_queue, counter=None):
         except Empty:
             pass
 
-        except requests.exceptions.ConnectionError:
+        except KeyboardInterrupt:
+            break
+
+        except Exception:
             if not job:
                 raise
 
             retries = job.get('retries', 0)
             if retries < job['max_retries']:
-                logging.debug('Retrying Page {0}'.format(job['page']))
+                logging.error('Retrying Page {0}'.format(job['page']))
                 job['retries'] = retries + 1
                 job_queue.put_nowait(job)
             else:
@@ -151,7 +162,7 @@ def run_workers(num_workers, jobs):
         for worker in workers:
             worker.join()
     except KeyboardInterrupt:
-        logging.error('Received Ctrl-C, interrupting all workers')
+        logging.info('Received Ctrl-C, interrupting all workers')
         for worker in workers:
             worker.terminate()
             worker.join()
@@ -172,18 +183,37 @@ def main():
     """
 
     parser = ArgumentParser()
-    parser.add_argument('url', help=url_help)
-    parser.add_argument('--page-size', type=int)
-    parser.add_argument('-n', '--show-num-pages', action='store_true')
-    parser.add_argument('-p', '--processes', type=int)
-    parser.add_argument('--fl', help=field_list_help)
-    parser.add_argument('-c', '--cdxj', action='store_true', default=True)
-    parser.add_argument('-o', '--output-prefix')
-    parser.add_argument('--collection',
-                        default='CC-MAIN-2015-06')
+
+    parser.add_argument('collection', default='CC-MAIN-2015-06', nargs='?',
+                        help='The index collection to use')
+
+    parser.add_argument('url',
+                        help=url_help)
+
+    parser.add_argument('-n', '--show-num-pages', action='store_true',
+                        help='Show Number of Pages only and exit')
+
+    parser.add_argument('-p', '--processes', type=int,
+                        help='Number of worker processes to use')
+
+    parser.add_argument('--fl',
+                        help=field_list_help)
+
+    parser.add_argument('-c', '--cdxj', action='store_true',
+                        help='Use cdxj output instead of json')
+
+    parser.add_argument('-z', '--gzipped', action='store_true',
+                        help='Storge gzipped results, with .gz extensions')
+
+    parser.add_argument('-o', '--output-prefix',
+                        help='Custom output prefix, append with -NN for each page')
+
+    parser.add_argument('--page-size', type=int,
+                        help='size of each page in blocks, >=1')
 
     parser.add_argument('--api-url',
-                        default='http://index.commoncrawl.org/')
+                        default='http://index.commoncrawl.org/',
+                        help='Set endpoint for CDX Server API')
 
     parser.add_argument('--timeout', default=30, type=int,
                         help='HTTP read timeout before retry')
@@ -195,7 +225,8 @@ def main():
                         help='Verbose logging of debug msgs')
 
     parser.add_argument('--pages', type=int, nargs='*',
-                        help='Get only specified page(s)')
+                        help=('Get only the specified result page(s) instead ' +
+                              'of all results'))
 
     # Logging
     r = parser.parse_args()
@@ -252,6 +283,7 @@ def main():
         job['page_size'] = r.page_size
         job['timeout'] = r.timeout
         job['max_retries'] = r.max_retries
+        job['gzipped'] = r.gzipped
         return job
 
     if r.pages:

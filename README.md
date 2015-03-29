@@ -9,18 +9,25 @@ This may be especially useful for prefix/domain extraction.
 
 To use, first install dependencies: `pip install -r requirements.txt`
 
-For example, fetch all entries in the index for url `http://iana.org/`, run:
-`python cc-index-client.py http://iana.org/`
+For example, fetch all entries in the index for url `http://iana.org/` from index `CC-MAIN-2015-06`, run:
+`./cc-index-client.py CC-MAIN-2015-06 http://iana.org/`
 
 It is often good idea to check how big the dataset is:
-`python cc-index-client.py *.io --show-num-pages`
+`./cc-index-client.py CC-MAIN-2015-06 *.io --show-num-pages`
 
 will print the number of pages that will be fetched to get a list of urls in the '*.io' domain.
 
-Fetch a list of urls from the index which are part of the *.io domain (note that this may be a lot!)
+This will give a relative size of the query. A query with thousands of pages may take a long time!
 
-`python cc-index-client.py *.io`
+Then, you might fetch a list of urls from the index which are part of the *.io domain, as follows:
 
+`python cc-index-client.py CC-MAIN-2015-06 *.io -fl url -z`
 
-Run `python cc-index-client.py --help` for a full list of options.
+The `-fl` flag specifies that only the `url` should be fetched, instead of the entire index row.
+
+The `-z` flag indicates to store the data compressed.
+
+For the above query, the output will be stored in `domain-io-N.gz` where for each page `N` (padded to number of digits)
+
+To for a full listing of options, run: `./cc-index-client.py --help`
 
