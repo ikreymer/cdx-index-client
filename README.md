@@ -2,7 +2,7 @@
 
 A simple command line tool retrieving a list of urls in bulk using the CommonCrawl Index API (http://index.commoncrawl.org)
 
-The tool takes advantage of the [Pagination API](https://github.com/ikreymer/pywb/wiki/CDX-Server-API#pagination-api) and the Python `multiprocessing` module
+The tool takes advantage of the [CDX Server Pagination API](https://github.com/ikreymer/pywb/wiki/CDX-Server-API#pagination-api) and the Python `multiprocessing` support
 to load pages (chunks) of a large url index in parallel.
 
 This may be especially useful for prefix/domain extraction.
@@ -37,6 +37,6 @@ While this tool was designed specifically for use with the index at http://index
 
 The client uses a common subset of [pywb CDX Server API](https://github.com/ikreymer/pywb/wiki/CDX-Server-API) and the original [IA Wayback CDX Server API](https://github.com/internetarchive/wayback/tree/master/wayback-cdx-server) so should work with either service.
 
-To specify a custom api endpoint, simply use the `--cdx-server-url` flag. eg, to connect to a locally running server, you can run:
+To specify a custom api endpoint, simply use the `--cdx-server-url` flag. For example, to connect to a locally running server, you can run:
 
-`./cdx-index-client example.com/* --cdx-server-url http://localhost:8080/pywb-cdx`
+`./cdx-index-client.py example.com/* --cdx-server-url http://localhost:8080/pywb-cdx`
