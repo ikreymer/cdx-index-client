@@ -33,9 +33,10 @@ To for a full listing of options, run: `./cdx-index-client.py --help`
 
 ## Additional Use Cases
 
-While this tool was designed specifically for use with index.commoncrawl.org, it can be used with any running cdx server, which conforms to either the [pywb CDX Server API](https://github.com/ikreymer/pywb/wiki/CDX-Server-API), as well as the
-original [IA Wayback CDX Server API](https://github.com/internetarchive/wayback/tree/master/wayback-cdx-server)
+While this tool was designed specifically for use with the index at http://index.commoncrawl.org, it can also be used with any running cdx server, including pywb, OpenWayback and IA Wayback.
 
-To specify a custom endpoint, simply use the `--cdx-server-url` flag. eg, to connect to a locally running server, you can run:
+The client uses a common subset of [pywb CDX Server API](https://github.com/ikreymer/pywb/wiki/CDX-Server-API) and the original [IA Wayback CDX Server API](https://github.com/internetarchive/wayback/tree/master/wayback-cdx-server) so should work with either service.
+
+To specify a custom api endpoint, simply use the `--cdx-server-url` flag. eg, to connect to a locally running server, you can run:
 
 `./cdx-index-client example.com/* --cdx-server-url http://localhost:8080/pywb-cdx`
