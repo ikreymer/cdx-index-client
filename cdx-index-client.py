@@ -203,7 +203,7 @@ def main():
     select fields to include: eg, --fl url,timestamp
     """
 
-    parser = ArgumentParser()
+    parser = ArgumentParser('CDX Index API Client')
 
     parser.add_argument('collection', default='CC-MAIN-2015-06', nargs='?',
                         help='The index collection to use')
