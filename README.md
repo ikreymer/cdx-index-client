@@ -1,7 +1,6 @@
-# CommonCrawl Index Client (CDX Inddex API Client)
+# CommonCrawl Index Client (CDX Index API Client)
 
-
-A sample command line tool retrieving a list of urls in bulk using the CommonCrawl Index API (http://index.commoncrawl.org)
+A simple command line tool retrieving a list of urls in bulk using the CommonCrawl Index API (http://index.commoncrawl.org)
 
 The tool takes advantage of the [Pagination API](https://github.com/ikreymer/pywb/wiki/CDX-Server-API#pagination-api) and the Python `multiprocessing` module
 to load pages (chunks) of a large url index in parallel.
@@ -32,3 +31,11 @@ For the above query, the output will be stored in `domain-io-N.gz` where for eac
 
 To for a full listing of options, run: `./cdx-index-client.py --help`
 
+## Additional Use Cases
+
+While this tool was designed specifically for use with index.commoncrawl.org, it can be used with any running cdx server, which conforms to either the [pywb CDX Server API](https://github.com/ikreymer/pywb/wiki/CDX-Server-API), as well as the
+original [IA Wayback CDX Server API](https://github.com/internetarchive/wayback/tree/master/wayback-cdx-server)
+
+To specify a custom endpoint, simply use the `--cdx-server-url` flag. eg, to connect to a locally running server, you can run:
+
+`./cdx-index-client example.com/* --cdx-server-url http://localhost:8080/pywb-cdx`
