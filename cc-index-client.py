@@ -14,6 +14,8 @@ import random
 import logging
 
 
+DEF_API_BASE = 'http://index.commoncrawl.org/'
+
 def get_num_pages(api_url, url, page_size=None):
     """ Use the showNumPages query
     to get the number of pages in the result set
@@ -30,7 +32,14 @@ def get_num_pages(api_url, url, page_size=None):
     session = requests.Session()
     r = session.get(api_url + '?' + query)
     pages_info = r.json()
-    return pages_info['pages']
+
+    if isinstance(pages_info, dict):
+        return pages_info['pages']
+    elif isinstance(pages_info, int):
+        return pages_info
+    else:
+        msg = 'Num pages query returned invalid data: ' + r.text
+        raise Exception(msg)
 
 def fetch_result_page(job_params):
     """ query the api, getting the specified
@@ -44,11 +53,12 @@ def fetch_result_page(job_params):
     output_prefix = job_params['output_prefix']
     timeout = job_params['timeout']
     gzipped = job_params['gzipped']
+    headers = job_params['headers']
 
     query = {'url': url,
              'page': page}
 
-    if not job_params.get('cdxj'):
+    if job_params.get('json'):
         query['output'] = 'json'
 
     if job_params.get('fl'):
@@ -67,9 +77,18 @@ def fetch_result_page(job_params):
 
     logging.debug('Fetching page {0} ({2} of {1})'.format(page_str, num_pages, page + 1))
 
+    # Add any custom headers that may have been specified
+    req_headers = {}
+    if headers:
+        for h in headers:
+            n, v = h.split(':', 1)
+            n = n.strip()
+            v = v.strip()
+            req_headers[n] = v
+
     # Get the result
     session = requests.Session()
-    r = session.get(api_url + '?' + query, stream=True, timeout=timeout)
+    r = session.get(api_url + '?' + query, headers=req_headers, stream=True, timeout=timeout)
 
     if r.status_code == 404:
         logging.error('No Results for for this query')
@@ -199,8 +218,8 @@ def main():
     parser.add_argument('--fl',
                         help=field_list_help)
 
-    parser.add_argument('-c', '--cdxj', action='store_true',
-                        help='Use cdxj output instead of json')
+    parser.add_argument('-j', '--json', action='store_true',
+                        help='Use json output instead of cdx(j)')
 
     parser.add_argument('-z', '--gzipped', action='store_true',
                         help='Storge gzipped results, with .gz extensions')
@@ -211,8 +230,7 @@ def main():
     parser.add_argument('--page-size', type=int,
                         help='size of each page in blocks, >=1')
 
-    parser.add_argument('--api-url',
-                        default='http://index.commoncrawl.org/',
+    parser.add_argument('--cdx-server-url',
                         help='Set endpoint for CDX Server API')
 
     parser.add_argument('--timeout', default=30, type=int,
@@ -228,6 +246,9 @@ def main():
                         help=('Get only the specified result page(s) instead ' +
                               'of all results'))
 
+    parser.add_argument('--header', nargs='*',
+                        help='Add custom header to request')
+
     # Logging
     r = parser.parse_args()
 
@@ -242,8 +263,10 @@ def main():
 
     logging.getLogger("requests").setLevel(logging.WARNING)
 
-
-    api_url = r.api_url + r.collection + '-index'
+    if r.cdx_server_url:
+        api_url = r.cdx_server_url
+    else:
+        api_url = DEF_API_BASE + r.collection + '-index'
 
     logging.debug('Getting Num Pages...')
     num_pages = get_num_pages(api_url, r.url, r.page_size)
@@ -259,17 +282,19 @@ def main():
     # set output
     if not r.output_prefix:
         if r.url.startswith('*'):
-            prefix = 'domain-' + r.url.strip('*.')
+            output_prefix = 'domain-' + r.url.strip('*.')
         elif r.url.endswith('*'):
-            prefix = 'prefix-' + r.url.strip('*')
+            output_prefix = 'prefix-' + r.url.strip('*')
+        elif r.url.startswith(('http://', 'https://', '//')):
+            output_prefix = r.url.split('//', 1)[-1]
         else:
-            prefix = r.url
+            output_prefix = r.url
 
-        prefix = prefix.strip('/')
-        prefix = prefix.replace('/', '-')
-        prefix = urllib.quote(prefix) + '-'
+        output_prefix = output_prefix.strip('/')
+        output_prefix = output_prefix.replace('/', '-')
+        output_prefix = urllib.quote(output_prefix) + '-'
     else:
-        prefix = r.output_prefix
+        output_prefix = r.output_prefix
 
     def get_page_job(page):
         job = {}
@@ -277,13 +302,14 @@ def main():
         job['url'] = r.url
         job['page'] = page
         job['num_pages'] = num_pages
-        job['output_prefix'] = prefix
+        job['output_prefix'] = output_prefix
         job['fl'] = r.fl
-        job['cdxj'] = r.cdxj
+        job['json'] = r.json
         job['page_size'] = r.page_size
         job['timeout'] = r.timeout
         job['max_retries'] = r.max_retries
         job['gzipped'] = r.gzipped
+        job['headers'] = r.header
         return job
 
     if r.pages:
