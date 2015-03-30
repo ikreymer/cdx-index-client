@@ -1,4 +1,4 @@
-# CommonCrawl Index Client (CDX Server Client)
+# CommonCrawl Index Client (CDX Inddex API Client)
 
 
 A sample command line tool retrieving a list of urls in bulk using the CommonCrawl Index API (http://index.commoncrawl.org)
