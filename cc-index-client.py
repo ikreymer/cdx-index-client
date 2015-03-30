@@ -151,7 +151,7 @@ def do_work(job_queue, counter=None):
                               format(job['page']))
 
 
-def run_workers(num_workers, jobs):
+def run_workers(num_workers, jobs, shuffle):
     """ Queue up all jobs start workers with job_queue
     catch KeyboardInterrupt to allow interrupting all workers
     Not using Pool to better hande KeyboardInterrupt gracefully
@@ -163,9 +163,11 @@ def run_workers(num_workers, jobs):
     job_queue = Queue()
     counter = Value('i', 0)
 
-    # shuffle queue to spread load (make this an option?)
-    jobs = list(jobs)
-    random.shuffle(jobs)
+    # optionally shuffle queue
+    if shuffle:
+        jobs = list(jobs)
+        random.shuffle(jobs)
+
     for job in jobs:
         job_queue.put(job)
 
@@ -248,6 +250,9 @@ def main():
 
     parser.add_argument('--header', nargs='*',
                         help='Add custom header to request')
+
+    parser.add_argument('--in-order', action='store_true',
+                        help='Fetch pages in order (default is to shuffle page list)')
 
     # Logging
     r = parser.parse_args()
@@ -338,7 +343,7 @@ def main():
     # generate page jobs
     job_list = map(get_page_job, page_list)
 
-    run_workers(num_workers, job_list)
+    run_workers(num_workers, job_list, not r.in_order)
 
 
 if __name__ == "__main__":
