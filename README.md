@@ -2,6 +2,8 @@
 
 A simple python command line tool for retrieving a list of urls in bulk using the CommonCrawl Index API at http://index.commoncrawl.org (or any other web archive CDX Server API).
 
+## Examples
+
 The tool takes advantage of the [CDX Server Pagination API](https://github.com/ikreymer/pywb/wiki/CDX-Server-API#pagination-api) and the Python `multiprocessing` support
 to load pages (chunks) of a large url index in parallel.
 
@@ -29,7 +31,54 @@ The `-z` flag indicates to store the data compressed.
 
 For the above query, the output will be stored in `domain-io-N.gz` where for each page `N` (padded to number of digits)
 
-To for a full listing of options, run: `./cdx-index-client.py --help`
+## Usage Options
+
+Below is the current list of options, also available by running `./cdx-index-client.py -h`
+
+```
+usage: CDX Index API Client [-h] [-n] [-p PROCESSES] [--fl FL] [-j] [-z]
+                            [-o OUTPUT_PREFIX] [-d DIRECTORY]
+                            [--page-size PAGE_SIZE]
+                            [-c COLL | --cdx-server-url CDX_SERVER_URL]
+                            [--timeout TIMEOUT] [--max-retries MAX_RETRIES]
+                            [-v] [--pages [PAGES [PAGES ...]]]
+                            [--header [HEADER [HEADER ...]]] [--in-order]
+                            url
+
+positional arguments:
+  url                   url to query in the index: For prefix, use:
+                        http://example.com/* For domain query, use:
+                        *.example.com
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -n, --show-num-pages  Show Number of Pages only and exit
+  -p PROCESSES, --processes PROCESSES
+                        Number of worker processes to use
+  --fl FL               select fields to include: eg, --fl url,timestamp
+  -j, --json            Use json output instead of cdx(j)
+  -z, --gzipped         Storge gzipped results, with .gz extensions
+  -o OUTPUT_PREFIX, --output-prefix OUTPUT_PREFIX
+                        Custom output prefix, append with -NN for each page
+  -d DIRECTORY, --directory DIRECTORY
+                        Specify custom output directory
+  --page-size PAGE_SIZE
+                        size of each page in blocks, >=1
+  -c COLL, --coll COLL  The index collection to use
+  --cdx-server-url CDX_SERVER_URL
+                        Set endpoint for CDX Server API
+  --timeout TIMEOUT     HTTP read timeout before retry
+  --max-retries MAX_RETRIES
+                        Number of retry attempts
+  -v, --verbose         Verbose logging of debug msgs
+  --pages [PAGES [PAGES ...]]
+                        Get only the specified result page(s) instead of all
+                        results
+  --header [HEADER [HEADER ...]]
+                        Add custom header to request
+  --in-order            Fetch pages in order (default is to shuffle page list)
+```
+
 
 ## Additional Use Cases
 
