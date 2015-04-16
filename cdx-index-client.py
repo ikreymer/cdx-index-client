@@ -10,6 +10,7 @@ import urllib
 import sys
 import signal
 import random
+import os
 
 import logging
 
@@ -54,6 +55,7 @@ def fetch_result_page(job_params):
     timeout = job_params['timeout']
     gzipped = job_params['gzipped']
     headers = job_params['headers']
+    dir_ = job_params['dir']
 
     query = {'url': url,
              'page': page}
@@ -99,6 +101,12 @@ def fetch_result_page(job_params):
         r.raise_for_status()
         r.close()
         return
+
+    # use dir, if provided
+    if dir_:
+        if not os.path.isdir(dir_):
+            os.makedirs(dir_)
+        filename = os.path.join(dir_, filename)
 
     if not gzipped:
         with open(filename, 'w+b') as fh:
@@ -205,9 +213,6 @@ def main():
 
     parser = ArgumentParser('CDX Index API Client')
 
-    parser.add_argument('collection', default='CC-MAIN-2015-06', nargs='?',
-                        help='The index collection to use')
-
     parser.add_argument('url',
                         help=url_help)
 
@@ -229,11 +234,18 @@ def main():
     parser.add_argument('-o', '--output-prefix',
                         help='Custom output prefix, append with -NN for each page')
 
+    parser.add_argument('-d', '--directory',
+                        help='Specify custom output directory')
+
     parser.add_argument('--page-size', type=int,
                         help='size of each page in blocks, >=1')
 
-    parser.add_argument('--cdx-server-url',
-                        help='Set endpoint for CDX Server API')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-c', '--coll', default='CC-MAIN-2015-06',
+                       help='The index collection to use')
+
+    group.add_argument('--cdx-server-url',
+                       help='Set endpoint for CDX Server API')
 
     parser.add_argument('--timeout', default=30, type=int,
                         help='HTTP read timeout before retry')
@@ -271,7 +283,7 @@ def main():
     if r.cdx_server_url:
         api_url = r.cdx_server_url
     else:
-        api_url = DEF_API_BASE + r.collection + '-index'
+        api_url = DEF_API_BASE + r.coll + '-index'
 
     logging.debug('Getting Num Pages...')
     num_pages = get_num_pages(api_url, r.url, r.page_size)
@@ -315,6 +327,7 @@ def main():
         job['max_retries'] = r.max_retries
         job['gzipped'] = r.gzipped
         job['headers'] = r.header
+        job['dir'] = r.directory
         return job
 
     if r.pages:
