@@ -1,1 +1,3 @@
 requests
+beautifulsoup
+urlparse

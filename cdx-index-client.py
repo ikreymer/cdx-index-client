@@ -14,8 +14,15 @@ import os
 
 import logging
 
+from urlparse import urljoin
+from bs4 import BeautifulSoup
 
 DEF_API_BASE = 'http://index.commoncrawl.org/'
+
+def get_index_urls(url):
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text,"lxml")
+    return [urljoin(url,a.attrs.get("href")+"-index") for a in soup.select("a") if "/CC-MAIN-" in a.attrs.get("href") ]
 
 def get_num_pages(api_url, url, page_size=None):
     """ Use the showNumPages query
@@ -195,9 +202,10 @@ def run_workers(num_workers, jobs, shuffle):
         for worker in workers:
             worker.terminate()
             worker.join()
+        raise
 
 
-def main():
+def get_args():
     url_help = """
     url to query in the index:
     For prefix, use:
@@ -241,7 +249,7 @@ def main():
                         help='size of each page in blocks, >=1')
 
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-c', '--coll', default='CC-MAIN-2015-06',
+    group.add_argument('-c', '--coll', 
                        help='The index collection to use')
 
     group.add_argument('--cdx-server-url',
@@ -266,9 +274,10 @@ def main():
     parser.add_argument('--in-order', action='store_true',
                         help='Fetch pages in order (default is to shuffle page list)')
 
-    # Logging
-    r = parser.parse_args()
+    return parser.parse_args()
 
+def main(r,prefix=None):
+    # Logging
     if r.verbose:
         level = logging.DEBUG
     else:
@@ -284,6 +293,8 @@ def main():
         api_url = r.cdx_server_url
     else:
         api_url = DEF_API_BASE + r.coll + '-index'
+
+    logging.debug('Getting Index From ' + api_url)
 
     logging.debug('Getting Num Pages...')
     num_pages = get_num_pages(api_url, r.url, r.page_size)
@@ -313,6 +324,8 @@ def main():
     else:
         output_prefix = r.output_prefix
 
+    if prefix:
+        output_prefix += prefix
     def get_page_job(page):
         job = {}
         job['api_url'] = api_url
@@ -360,4 +373,15 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        r = get_args()
+        if r.coll or r.cdx_server_url:
+            main(r)
+        else:
+            api_urls=get_index_urls(DEF_API_BASE)
+            for api_url in api_urls:
+                r.cdx_server_url=api_url
+                prefix=(api_url.split('/')[-1])[0:-6]+'-'
+                main(r,prefix)
+    except KeyboardInterrupt:
+        logging.info('Received Ctrl-C, Finish.')
