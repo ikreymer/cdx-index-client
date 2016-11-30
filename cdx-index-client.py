@@ -255,9 +255,9 @@ def get_args():
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-c', '--coll',
-                       help=('The index collection to use or '+
-                        '"all" to use all available indexes. '+
-                       'The default value is the most recent available index'))
+                       help=('The index collection to use or ' +
+                             '"all" to use all available indexes. ' +
+                             'The default value is the most recent available index'))
 
     group.add_argument('--cdx-server-url',
                        help='Set endpoint for CDX Server API')
