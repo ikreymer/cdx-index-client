@@ -63,7 +63,9 @@ optional arguments:
                         Specify custom output directory
   --page-size PAGE_SIZE
                         size of each page in blocks, >=1
-  -c COLL, --coll COLL  The index collection to use
+  -c COLL, --coll COLL  The index collection to use or "all" to use all
+                        available indexes. The default value is the most
+                        recent available index
   --cdx-server-url CDX_SERVER_URL
                         Set endpoint for CDX Server API
   --timeout TIMEOUT     HTTP read timeout before retry
@@ -77,8 +79,6 @@ optional arguments:
                         Add custom header to request
   --in-order            Fetch pages in order (default is to shuffle page list)
 ```
-
-If `--coll` and `--cdx-server-url` are unset `cdx-index-client.py` does a loop over all index available in http://index.commoncrawl.org
 
 ## Additional Use Cases
 

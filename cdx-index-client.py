@@ -19,10 +19,12 @@ from bs4 import BeautifulSoup
 
 DEF_API_BASE = 'http://index.commoncrawl.org/'
 
+
 def get_index_urls(url):
     response = requests.get(url)
-    soup = BeautifulSoup(response.text,"lxml")
-    return [urljoin(url,a.attrs.get("href")+"-index") for a in soup.select("a") if "/CC-MAIN-" in a.attrs.get("href") ]
+    soup = BeautifulSoup(response.text, "lxml")
+    return [urljoin(url, a.attrs.get("href") + "-index") for a in soup.select("a") if "/CC-MAIN-" in a.attrs.get("href")]
+
 
 def get_num_pages(api_url, url, page_size=None):
     """ Use the showNumPages query
@@ -48,6 +50,7 @@ def get_num_pages(api_url, url, page_size=None):
     else:
         msg = 'Num pages query returned invalid data: ' + r.text
         raise Exception(msg)
+
 
 def fetch_result_page(job_params):
     """ query the api, getting the specified
@@ -84,7 +87,8 @@ def fetch_result_page(job_params):
     page_str = format_ % page
     filename = output_prefix + page_str
 
-    logging.debug('Fetching page {0} ({2} of {1})'.format(page_str, num_pages, page + 1))
+    logging.debug('Fetching page {0} ({2} of {1})'.format(
+        page_str, num_pages, page + 1))
 
     # Add any custom headers that may have been specified
     req_headers = {}
@@ -97,7 +101,8 @@ def fetch_result_page(job_params):
 
     # Get the result
     session = requests.Session()
-    r = session.get(api_url + '?' + query, headers=req_headers, stream=True, timeout=timeout)
+    r = session.get(api_url + '?' + query, headers=req_headers,
+                    stream=True, timeout=timeout)
 
     if r.status_code == 404:
         logging.error('No Results for for this query')
@@ -145,7 +150,7 @@ def do_work(job_queue, counter=None):
                 num_done = counter.value
 
             logging.info('{0} page(s) of {1} finished'.format(num_done,
-                                                     job['num_pages']))
+                                                              job['num_pages']))
         except Empty:
             pass
 
@@ -249,8 +254,10 @@ def get_args():
                         help='size of each page in blocks, >=1')
 
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-c', '--coll', 
-                       help='The index collection to use')
+    group.add_argument('-c', '--coll',
+                       help=('The index collection to use or '+
+                        '"all" to use all available indexes. '+
+                       'The default value is the most recent available index'))
 
     group.add_argument('--cdx-server-url',
                        help='Set endpoint for CDX Server API')
@@ -274,27 +281,34 @@ def get_args():
     parser.add_argument('--in-order', action='store_true',
                         help='Fetch pages in order (default is to shuffle page list)')
 
-    return parser.parse_args()
+    r = parser.parse_args()
 
-def main(r,prefix=None):
+    if not r.coll and not r.cdx_server_url:
+        api_urls = get_index_urls(DEF_API_BASE)
+        r.cdx_server_url = api_urls[0]
+
     # Logging
     if r.verbose:
         level = logging.DEBUG
     else:
         level = logging.INFO
 
-
     logging.basicConfig(format='%(asctime)s: [%(levelname)s]: %(message)s',
                         level=level)
 
     logging.getLogger("requests").setLevel(logging.WARNING)
+
+    return r
+
+
+def read_index(r, prefix=None):
 
     if r.cdx_server_url:
         api_url = r.cdx_server_url
     else:
         api_url = DEF_API_BASE + r.coll + '-index'
 
-    logging.debug('Getting Index From ' + api_url)
+    logging.info('Getting Index From ' + api_url)
 
     logging.debug('Getting Num Pages...')
     num_pages = get_num_pages(api_url, r.url, r.page_size)
@@ -326,6 +340,7 @@ def main(r,prefix=None):
 
     if prefix:
         output_prefix += prefix
+
     def get_page_job(page):
         job = {}
         job['api_url'] = api_url
@@ -372,16 +387,17 @@ def main(r,prefix=None):
     run_workers(num_workers, job_list, not r.in_order)
 
 
+def main():
+    r = get_args()
+    if r.coll == "all":
+        api_urls = get_index_urls(DEF_API_BASE)
+        for api_url in api_urls:
+            r.cdx_server_url = api_url
+            prefix = (api_url.split('/')[-1])[0:-6] + '-'
+            read_index(r, prefix)
+    else:
+        read_index(r)
+
+
 if __name__ == "__main__":
-    try:
-        r = get_args()
-        if r.coll or r.cdx_server_url:
-            main(r)
-        else:
-            api_urls=get_index_urls(DEF_API_BASE)
-            for api_url in api_urls:
-                r.cdx_server_url=api_url
-                prefix=(api_url.split('/')[-1])[0:-6]+'-'
-                main(r,prefix)
-    except KeyboardInterrupt:
-        logging.info('Received Ctrl-C, Finish.')
+    main()
