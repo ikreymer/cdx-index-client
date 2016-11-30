@@ -64,7 +64,9 @@ optional arguments:
                         Specify custom output directory
   --page-size PAGE_SIZE
                         size of each page in blocks, >=1
-  -c COLL, --coll COLL  The index collection to use
+  -c COLL, --coll COLL  The index collection to use or "all" to use all
+                        available indexes. The default value is the most
+                        recent available index
   --cdx-server-url CDX_SERVER_URL
                         Set endpoint for CDX Server API
   --timeout TIMEOUT     HTTP read timeout before retry
