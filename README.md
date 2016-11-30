@@ -78,7 +78,7 @@ optional arguments:
   --in-order            Fetch pages in order (default is to shuffle page list)
 ```
 
-If --coll and --cdx-server-url are unset cdx-index-client.py does a loop over all index available in http://index.commoncrawl.org
+If `--coll` and `--cdx-server-url` are unset `cdx-index-client.py` does a loop over all index available in http://index.commoncrawl.org
 
 ## Additional Use Cases
 
