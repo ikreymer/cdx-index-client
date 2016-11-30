@@ -18,6 +18,7 @@ It is often good idea to check how big the dataset is:
 `./cdx-index-client.py -c CC-MAIN-2015-06 *.io --show-num-pages`
 
 will print the number of pages that will be fetched to get a list of urls in the '*.io' domain.
+
 This will give a relative size of the query. A query with thousands of pages may take a long time!
 
 Then, you might fetch a list of urls from the index which are part of the *.io domain, as follows:
@@ -79,6 +80,7 @@ optional arguments:
                         Add custom header to request
   --in-order            Fetch pages in order (default is to shuffle page list)
 ```
+
 
 ## Additional Use Cases
 
