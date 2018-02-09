@@ -15,15 +15,13 @@ import os
 import logging
 
 from urlparse import urljoin
-from bs4 import BeautifulSoup
 
 DEF_API_BASE = 'http://index.commoncrawl.org/'
 
 
 def get_index_urls(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "lxml")
-    return [urljoin(url, a.attrs.get("href") + "-index") for a in soup.select("a") if "/CC-MAIN-" in a.attrs.get("href")]
+    response = requests.get(urljoin(url, 'collinfo.json')).json()
+    return [info['cdx-api'] for info in response]
 
 
 def get_num_pages(api_url, url, page_size=None):
