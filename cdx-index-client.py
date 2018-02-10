@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from future.standard_library import install_aliases
+install_aliases()
 
 from argparse import ArgumentParser
 from Queue import Empty
@@ -6,23 +8,12 @@ from multiprocessing import Process, Queue, Value, cpu_count
 
 import requests
 import shutil
-import urllib
 import sys
 import signal
 import random
 import os
-
 import logging
-
-from urlparse import urljoin
-
-DEF_API_BASE = 'http://index.commoncrawl.org/'
-
-
-def get_index_urls(url):
-    response = requests.get(urljoin(url, 'collinfo.json')).json()
-    return [info['cdx-api'] for info in response]
-
+from urllib.parse import urljoin, quote
 
 def get_num_pages(api_url, url, page_size=None):
     """ Use the showNumPages query
@@ -34,11 +25,9 @@ def get_num_pages(api_url, url, page_size=None):
     if page_size:
         query['pageSize'] = page_size
 
-    query = urllib.urlencode(query)
-
     # Get the result
     session = requests.Session()
-    r = session.get(api_url + '?' + query)
+    r = session.get(api_url, params=query)
     pages_info = r.json()
 
     if isinstance(pages_info, dict):
@@ -77,8 +66,6 @@ def fetch_result_page(job_params):
     if job_params.get('page_size'):
         query['pageSize'] = job_params['page_size']
 
-    query = urllib.urlencode(query)
-
     # format filename to number of digits
     nd = len(str(num_pages))
     format_ = '%0' + str(nd) + 'd'
@@ -99,7 +86,7 @@ def fetch_result_page(job_params):
 
     # Get the result
     session = requests.Session()
-    r = session.get(api_url + '?' + query, headers=req_headers,
+    r = session.get(api_url, params=query, headers=req_headers,
                     stream=True, timeout=timeout)
 
     if r.status_code == 404:
