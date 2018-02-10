@@ -244,8 +244,10 @@ def get_args():
                              '"all" to use all available indexes. ' +
                              'The default value is the most recent available index'))
 
-    group.add_argument('--cdx-server-url',
-                       help='Set endpoint for CDX Server API')
+    CDX_SERVER_URL = 'http://index.commoncrawl.org/'
+    group.add_argument('--cdx-server-url', default=CDX_SERVER_URL,
+                       help='Set endpoint for CDX Server API ' +
+                            'default to %s' % CDX_SERVER_URL)
 
     parser.add_argument('--timeout', default=30, type=int,
                         help='HTTP read timeout before retry')
@@ -268,10 +270,6 @@ def get_args():
 
     r = parser.parse_args()
 
-    if not r.coll and not r.cdx_server_url:
-        api_urls = get_index_urls(DEF_API_BASE)
-        r.cdx_server_url = api_urls[0]
-
     # Logging
     if r.verbose:
         level = logging.DEBUG
@@ -285,14 +283,7 @@ def get_args():
 
     return r
 
-
-def read_index(r, prefix=None):
-
-    if r.cdx_server_url:
-        api_url = r.cdx_server_url
-    else:
-        api_url = DEF_API_BASE + r.coll + '-index'
-
+def read_index(r, api_url, prefix=None):
     logging.info('Getting Index From ' + api_url)
 
     logging.debug('Getting Num Pages...')
@@ -319,7 +310,7 @@ def read_index(r, prefix=None):
 
         output_prefix = output_prefix.strip('/')
         output_prefix = output_prefix.replace('/', '-')
-        output_prefix = urllib.quote(output_prefix) + '-'
+        output_prefix = quote(output_prefix) + '-'
     else:
         output_prefix = r.output_prefix
 
@@ -374,15 +365,16 @@ def read_index(r, prefix=None):
 
 def main():
     r = get_args()
-    if r.coll == "all":
-        api_urls = get_index_urls(DEF_API_BASE)
-        for api_url in api_urls:
-            r.cdx_server_url = api_url
-            prefix = (api_url.split('/')[-1])[0:-6] + '-'
-            read_index(r, prefix)
-    else:
-        read_index(r)
 
+    collinfo = requests.get(urljoin(r.cdx_server_url, 'collinfo.json')).json()
+
+    if not r.coll:
+        collinfo = [collinfo[0]]
+    elif r.coll and r.coll != 'all':
+        collinfo = filter(lambda (c): c['id'] == r.coll, collinfo)
+
+    for info in collinfo:
+        read_index(r, info['cdx-api'], info['id'])
 
 if __name__ == "__main__":
     main()
