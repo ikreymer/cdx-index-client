@@ -2,8 +2,10 @@
 from future.standard_library import install_aliases
 install_aliases()
 
+from builtins import range
+
 from argparse import ArgumentParser
-from Queue import Empty
+from multiprocessing.queues import Empty
 from multiprocessing import Process, Queue, Value, cpu_count
 
 import requests
@@ -178,7 +180,7 @@ def run_workers(num_workers, jobs, shuffle):
 
     workers = []
 
-    for i in xrange(0, num_workers):
+    for i in range(0, num_workers):
         tmp = Process(target=do_work,
                       args=(job_queue, counter))
         tmp.start()
@@ -371,7 +373,7 @@ def main():
     if not r.coll:
         collinfo = [collinfo[0]]
     elif r.coll and r.coll != 'all':
-        collinfo = filter(lambda (c): c['id'] == r.coll, collinfo)
+        collinfo = filter(lambda c: c['id'] == r.coll, collinfo)
 
     for info in collinfo:
         read_index(r, info['cdx-api'], info['id'])
