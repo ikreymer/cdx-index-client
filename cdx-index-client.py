@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from future.standard_library import install_aliases
+install_aliases()
 
 from argparse import ArgumentParser
 from Queue import Empty
@@ -6,25 +8,12 @@ from multiprocessing import Process, Queue, Value, cpu_count
 
 import requests
 import shutil
-import urllib
 import sys
 import signal
 import random
 import os
-
 import logging
-
-from urlparse import urljoin
-from bs4 import BeautifulSoup
-
-DEF_API_BASE = 'http://index.commoncrawl.org/'
-
-
-def get_index_urls(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "lxml")
-    return [urljoin(url, a.attrs.get("href") + "-index") for a in soup.select("a") if "/CC-MAIN-" in a.attrs.get("href")]
-
+from urllib.parse import urljoin, quote
 
 def get_num_pages(api_url, url, page_size=None):
     """ Use the showNumPages query
@@ -36,11 +25,9 @@ def get_num_pages(api_url, url, page_size=None):
     if page_size:
         query['pageSize'] = page_size
 
-    query = urllib.urlencode(query)
-
     # Get the result
     session = requests.Session()
-    r = session.get(api_url + '?' + query)
+    r = session.get(api_url, params=query)
     pages_info = r.json()
 
     if isinstance(pages_info, dict):
@@ -79,8 +66,6 @@ def fetch_result_page(job_params):
     if job_params.get('page_size'):
         query['pageSize'] = job_params['page_size']
 
-    query = urllib.urlencode(query)
-
     # format filename to number of digits
     nd = len(str(num_pages))
     format_ = '%0' + str(nd) + 'd'
@@ -101,7 +86,7 @@ def fetch_result_page(job_params):
 
     # Get the result
     session = requests.Session()
-    r = session.get(api_url + '?' + query, headers=req_headers,
+    r = session.get(api_url, params=query, headers=req_headers,
                     stream=True, timeout=timeout)
 
     if r.status_code == 404:
@@ -259,8 +244,10 @@ def get_args():
                              '"all" to use all available indexes. ' +
                              'The default value is the most recent available index'))
 
-    group.add_argument('--cdx-server-url',
-                       help='Set endpoint for CDX Server API')
+    CDX_SERVER_URL = 'http://index.commoncrawl.org/'
+    group.add_argument('--cdx-server-url', default=CDX_SERVER_URL,
+                       help='Set endpoint for CDX Server API ' +
+                            'default to %s' % CDX_SERVER_URL)
 
     parser.add_argument('--timeout', default=30, type=int,
                         help='HTTP read timeout before retry')
@@ -283,10 +270,6 @@ def get_args():
 
     r = parser.parse_args()
 
-    if not r.coll and not r.cdx_server_url:
-        api_urls = get_index_urls(DEF_API_BASE)
-        r.cdx_server_url = api_urls[0]
-
     # Logging
     if r.verbose:
         level = logging.DEBUG
@@ -300,14 +283,7 @@ def get_args():
 
     return r
 
-
-def read_index(r, prefix=None):
-
-    if r.cdx_server_url:
-        api_url = r.cdx_server_url
-    else:
-        api_url = DEF_API_BASE + r.coll + '-index'
-
+def read_index(r, api_url, prefix=None):
     logging.info('Getting Index From ' + api_url)
 
     logging.debug('Getting Num Pages...')
@@ -334,7 +310,7 @@ def read_index(r, prefix=None):
 
         output_prefix = output_prefix.strip('/')
         output_prefix = output_prefix.replace('/', '-')
-        output_prefix = urllib.quote(output_prefix) + '-'
+        output_prefix = quote(output_prefix) + '-'
     else:
         output_prefix = r.output_prefix
 
@@ -389,15 +365,16 @@ def read_index(r, prefix=None):
 
 def main():
     r = get_args()
-    if r.coll == "all":
-        api_urls = get_index_urls(DEF_API_BASE)
-        for api_url in api_urls:
-            r.cdx_server_url = api_url
-            prefix = (api_url.split('/')[-1])[0:-6] + '-'
-            read_index(r, prefix)
-    else:
-        read_index(r)
 
+    collinfo = requests.get(urljoin(r.cdx_server_url, 'collinfo.json')).json()
+
+    if not r.coll:
+        collinfo = [collinfo[0]]
+    elif r.coll and r.coll != 'all':
+        collinfo = filter(lambda (c): c['id'] == r.coll, collinfo)
+
+    for info in collinfo:
+        read_index(r, info['cdx-api'], info['id'])
 
 if __name__ == "__main__":
     main()

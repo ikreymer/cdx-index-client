@@ -1,2 +1,2 @@
+future
 requests
-beautifulsoup4
